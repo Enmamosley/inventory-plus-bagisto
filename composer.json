@@ -1,0 +1,42 @@
+{
+    "name": "enmamosley/inventory-plus-bagisto",
+    "description": "Advanced Inventory Management with Barcode Support for Bagisto",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["bagisto", "inventory", "barcode", "stock", "warehouse", "ean", "upc"],
+    "authors": [
+        {
+            "name": "Enmanoell Mosley",
+            "email": "enma@mosley.mx"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "picqer/php-barcode-generator": "^3.0",
+        "bagisto/bagisto": "^2.0"
+    },
+    "require-dev": {
+        "pestphp/pest": "^3.0",
+        "orchestra/testbench": "^9.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Webkul\\InventoryPlus\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Webkul\\InventoryPlus\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Webkul\\InventoryPlus\\Providers\\InventoryPlusServiceProvider",
+                "Webkul\\InventoryPlus\\Providers\\ModuleServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
