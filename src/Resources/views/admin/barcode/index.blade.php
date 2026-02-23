@@ -9,37 +9,68 @@
         </p>
     </div>
 
-    <div class="mt-3.5 grid grid-cols-2 gap-4">
-        {{-- Barcode Lookup --}}
-        <div class="box-shadow rounded bg-white p-4 dark:bg-gray-900">
-            <h3 class="mb-3 text-lg font-semibold">🔍 @lang('inventory-plus::app.admin.barcode.search')</h3>
+    {{-- MAIN: Scan & Update Stock --}}
+    <div class="mt-3.5 box-shadow rounded bg-white p-4 dark:bg-gray-900">
+        <h3 class="mb-3 text-lg font-semibold">📦 @lang('inventory-plus::app.admin.barcode.scan-update')</h3>
 
-            <div class="flex gap-2">
-                <input type="text"
-                       id="barcode-input"
-                       class="flex-1 rounded border px-3 py-2 dark:border-gray-700 dark:bg-gray-800"
-                       placeholder="@lang('inventory-plus::app.admin.barcode.scan-placeholder')"
-                       autofocus
-                       onkeydown="if(event.key==='Enter'){event.preventDefault();lookupBarcode();}">
-                <button onclick="lookupBarcode()" class="primary-button">
-                    @lang('inventory-plus::app.admin.barcode.search')
-                </button>
-            </div>
-
-            <div id="lookup-result" class="mt-4 hidden">
-                <div class="rounded border p-4">
-                    <h4 class="font-semibold" id="product-name"></h4>
-                    <p class="text-sm text-gray-500" id="product-sku"></p>
-                    <div id="product-barcode-img" class="my-2"></div>
-                    <div id="product-inventories" class="mt-2"></div>
-                </div>
-            </div>
-
-            <div id="lookup-error" class="mt-4 hidden rounded bg-red-50 p-3 text-red-600">
-                @lang('inventory-plus::app.admin.barcode.not-found')
-            </div>
+        <div class="flex gap-2">
+            <input type="text"
+                   id="barcode-input"
+                   class="flex-1 rounded border px-3 py-2 text-lg dark:border-gray-700 dark:bg-gray-800"
+                   placeholder="@lang('inventory-plus::app.admin.barcode.scan-placeholder')"
+                   autofocus
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();lookupBarcode();}">
+            <button onclick="lookupBarcode()" class="primary-button">
+                🔍 @lang('inventory-plus::app.admin.barcode.search')
+            </button>
         </div>
 
+        <div id="lookup-error" class="mt-4 hidden rounded bg-red-50 p-3 text-red-600 dark:bg-red-900/20 dark:text-red-400">
+            @lang('inventory-plus::app.admin.barcode.not-found')
+        </div>
+
+        <div id="lookup-success" class="mt-4 hidden rounded bg-green-50 p-3 text-green-700 dark:bg-green-900/20 dark:text-green-400">
+        </div>
+
+        {{-- Product Info + Stock Editor (hidden until scan) --}}
+        <div id="product-panel" class="mt-4 hidden">
+            <div class="rounded border dark:border-gray-700">
+                {{-- Product Header --}}
+                <div class="flex items-center justify-between border-b bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <div>
+                        <h4 class="text-lg font-bold" id="product-name"></h4>
+                        <p class="text-sm text-gray-500" id="product-sku"></p>
+                    </div>
+                    <div id="product-barcode-badge" class="rounded bg-blue-100 px-3 py-1 font-mono text-sm text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"></div>
+                </div>
+
+                {{-- Stock Per Source + Quick Edit --}}
+                <div class="p-4">
+                    <h5 class="mb-3 font-semibold">@lang('inventory-plus::app.admin.barcode.stock-by-source')</h5>
+                    <div id="stock-sources"></div>
+
+                    <input type="hidden" id="current-product-id" value="">
+                </div>
+
+                {{-- Quick Actions --}}
+                <div class="border-t bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <div class="flex flex-wrap gap-2">
+                        <a id="link-product-edit" href="#" class="secondary-button text-sm" target="_blank">
+                            ✏️ @lang('inventory-plus::app.admin.barcode.edit-product')
+                        </a>
+                        <a id="link-product-history" href="#" class="secondary-button text-sm">
+                            📋 @lang('inventory-plus::app.admin.barcode.view-history')
+                        </a>
+                        <button onclick="document.getElementById('barcode-input').value='';document.getElementById('barcode-input').focus();" class="secondary-button text-sm">
+                            🔄 @lang('inventory-plus::app.admin.barcode.scan-next')
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 grid grid-cols-2 gap-4">
         {{-- Barcode Generator --}}
         <div class="box-shadow rounded bg-white p-4 dark:bg-gray-900">
             <h3 class="mb-3 text-lg font-semibold">🏷️ @lang('inventory-plus::app.admin.barcode.generate')</h3>
@@ -77,27 +108,25 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    {{-- Print Labels Section --}}
-    <div class="mt-4 box-shadow rounded bg-white p-4 dark:bg-gray-900">
-        <h3 class="mb-3 text-lg font-semibold">🖨️ @lang('inventory-plus::app.admin.barcode.print-labels')</h3>
+        {{-- Print Labels Section --}}
+        <div class="box-shadow rounded bg-white p-4 dark:bg-gray-900">
+            <h3 class="mb-3 text-lg font-semibold">🖨️ @lang('inventory-plus::app.admin.barcode.print-labels')</h3>
 
-        <form method="POST" action="{{ route('admin.inventory-plus.barcode.print-labels') }}" target="_blank">
-            @csrf
+            <form method="POST" action="{{ route('admin.inventory-plus.barcode.print-labels') }}" target="_blank">
+                @csrf
 
-            <x-admin::form.control-group>
-                <x-admin::form.control-group.label>
-                    @lang('inventory-plus::app.admin.barcode.select-products')
-                </x-admin::form.control-group.label>
-                <input type="text"
-                       name="product_ids_text"
-                       class="w-full rounded border px-3 py-2 dark:border-gray-700 dark:bg-gray-800"
-                       placeholder="Enter product IDs (comma-separated): 1, 2, 3"
-                       id="label-product-ids">
-            </x-admin::form.control-group>
+                <x-admin::form.control-group>
+                    <x-admin::form.control-group.label>
+                        @lang('inventory-plus::app.admin.barcode.select-products')
+                    </x-admin::form.control-group.label>
+                    <input type="text"
+                           name="product_ids_text"
+                           class="w-full rounded border px-3 py-2 dark:border-gray-700 dark:bg-gray-800"
+                           placeholder="Enter product IDs (comma-separated): 1, 2, 3"
+                           id="label-product-ids">
+                </x-admin::form.control-group>
 
-            <div class="grid grid-cols-2 gap-4">
                 <x-admin::form.control-group>
                     <x-admin::form.control-group.label>
                         @lang('inventory-plus::app.admin.barcode.copies')
@@ -105,23 +134,26 @@
                     <input type="number" name="copies" value="1" min="1" max="100"
                            class="w-full rounded border px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
                 </x-admin::form.control-group>
-            </div>
 
-            <div id="hidden-product-ids"></div>
+                <div id="hidden-product-ids"></div>
 
-            <button type="submit" class="primary-button mt-3" onclick="prepareProductIds()">
-                @lang('inventory-plus::app.admin.barcode.print-labels')
-            </button>
-        </form>
+                <button type="submit" class="primary-button mt-3" onclick="prepareProductIds()">
+                    @lang('inventory-plus::app.admin.barcode.print-labels')
+                </button>
+            </form>
+        </div>
     </div>
 
     <script>
+        let currentProduct = null;
+
         async function lookupBarcode() {
             const barcode = document.getElementById('barcode-input').value.trim();
             if (!barcode) return;
 
-            document.getElementById('lookup-result').classList.add('hidden');
+            document.getElementById('product-panel').classList.add('hidden');
             document.getElementById('lookup-error').classList.add('hidden');
+            document.getElementById('lookup-success').classList.add('hidden');
 
             try {
                 const response = await fetch('{{ route("admin.inventory-plus.barcode.lookup") }}', {
@@ -140,22 +172,117 @@
                 }
 
                 const data = await response.json();
-                const p = data.product;
-
-                document.getElementById('product-name').textContent = p.name;
-                document.getElementById('product-sku').textContent = 'SKU: ' + p.sku + ' | Barcode: ' + p.barcode;
-
-                // Show inventories
-                let invHtml = '<div class="mt-2 text-sm"><strong>Stock:</strong><ul class="ml-4 list-disc">';
-                p.inventories.forEach(inv => {
-                    invHtml += `<li>${inv.source_name}: <strong>${inv.qty}</strong></li>`;
-                });
-                invHtml += '</ul></div>';
-                document.getElementById('product-inventories').innerHTML = invHtml;
-
-                document.getElementById('lookup-result').classList.remove('hidden');
+                currentProduct = data.product;
+                renderProductPanel(currentProduct);
             } catch (e) {
                 document.getElementById('lookup-error').classList.remove('hidden');
+            }
+        }
+
+        function renderProductPanel(p) {
+            document.getElementById('product-name').textContent = p.name;
+            document.getElementById('product-sku').textContent = 'SKU: ' + p.sku;
+            document.getElementById('product-barcode-badge').textContent = p.barcode;
+            document.getElementById('current-product-id').value = p.id;
+
+            // Build stock editor per source
+            let html = '';
+            p.inventories.forEach((inv, idx) => {
+                html += `
+                <div class="mb-3 flex items-center gap-3 rounded border p-3 dark:border-gray-700" id="source-row-${inv.source_id}">
+                    <div class="flex-1">
+                        <span class="font-medium">${inv.source_name}</span>
+                        <span class="ml-2 text-sm text-gray-400">@lang('inventory-plus::app.admin.barcode.current'):</span>
+                        <span class="font-bold text-lg" id="current-qty-${inv.source_id}">${inv.qty}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select id="action-${inv.source_id}" class="rounded border px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800">
+                            <option value="set">@lang('inventory-plus::app.admin.barcode.action-set')</option>
+                            <option value="add">@lang('inventory-plus::app.admin.barcode.action-add')</option>
+                            <option value="subtract">@lang('inventory-plus::app.admin.barcode.action-subtract')</option>
+                        </select>
+                        <input type="number"
+                               id="qty-${inv.source_id}"
+                               class="w-24 rounded border px-2 py-1.5 text-center text-sm dark:border-gray-700 dark:bg-gray-800"
+                               placeholder="0"
+                               min="0"
+                               onkeydown="if(event.key==='Enter'){event.preventDefault();updateStock(${inv.source_id});}">
+                        <button onclick="updateStock(${inv.source_id})" class="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700">
+                            ✓ @lang('inventory-plus::app.admin.barcode.update')
+                        </button>
+                    </div>
+                </div>`;
+            });
+
+            if (p.inventories.length === 0) {
+                html = '<p class="text-sm text-gray-400">@lang('inventory-plus::app.admin.barcode.no-inventory')</p>';
+            }
+
+            document.getElementById('stock-sources').innerHTML = html;
+
+            // Links
+            document.getElementById('link-product-edit').href = '{{ url(config("app.admin_url", "admin") . "/catalog/products/edit") }}/' + p.id;
+            document.getElementById('link-product-history').href = '{{ route("admin.inventory-plus.movements.product-history", ":id") }}'.replace(':id', p.id);
+
+            document.getElementById('product-panel').classList.remove('hidden');
+        }
+
+        async function updateStock(sourceId) {
+            const productId = document.getElementById('current-product-id').value;
+            const action = document.getElementById('action-' + sourceId).value;
+            const qtyInput = document.getElementById('qty-' + sourceId);
+            const qty = parseInt(qtyInput.value);
+
+            if (isNaN(qty) || qty < 0) {
+                qtyInput.classList.add('border-red-500');
+                return;
+            }
+            qtyInput.classList.remove('border-red-500');
+
+            const row = document.getElementById('source-row-' + sourceId);
+            row.style.opacity = '0.5';
+
+            try {
+                const response = await fetch('{{ route("admin.inventory-plus.barcode.update-stock") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        product_id: productId,
+                        inventory_source_id: sourceId,
+                        action: action,
+                        qty: qty,
+                    }),
+                });
+
+                const data = await response.json();
+                row.style.opacity = '1';
+
+                if (data.success) {
+                    // Update displayed qty
+                    document.getElementById('current-qty-' + sourceId).textContent = data.new_qty;
+                    qtyInput.value = '';
+
+                    // Flash green
+                    row.classList.add('border-green-500', 'bg-green-50', 'dark:bg-green-900/20');
+                    setTimeout(() => {
+                        row.classList.remove('border-green-500', 'bg-green-50', 'dark:bg-green-900/20');
+                    }, 1500);
+
+                    // Show success message
+                    const msg = document.getElementById('lookup-success');
+                    msg.textContent = data.message;
+                    msg.classList.remove('hidden');
+                    setTimeout(() => msg.classList.add('hidden'), 3000);
+                } else {
+                    alert(data.message || 'Error updating stock');
+                }
+            } catch (e) {
+                row.style.opacity = '1';
+                alert('Error: ' + e.message);
             }
         }
 
@@ -197,5 +324,10 @@
                 container.appendChild(input);
             });
         }
+
+        // Auto-focus input on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('barcode-input').focus();
+        });
     </script>
 </x-admin::layouts>

@@ -36,6 +36,7 @@ Route::group([
     Route::controller(BarcodeController::class)->prefix('barcode')->as('barcode.')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/lookup', 'lookup')->name('lookup');
+        Route::post('/update-stock', 'updateStock')->name('update-stock');
         Route::post('/generate', 'generate')->name('generate');
         Route::post('/print-labels', 'printLabels')->name('print-labels');
         Route::post('/auto-generate', 'autoGenerate')->name('auto-generate');

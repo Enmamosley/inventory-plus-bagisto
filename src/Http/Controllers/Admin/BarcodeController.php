@@ -5,12 +5,15 @@ namespace Webkul\InventoryPlus\Http\Controllers\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Webkul\InventoryPlus\Enums\BarcodeType;
+use Webkul\InventoryPlus\Enums\MovementType;
 use Webkul\InventoryPlus\Services\BarcodeService;
+use Webkul\InventoryPlus\Services\InventoryMovementService;
 
 class BarcodeController extends Controller
 {
     public function __construct(
-        protected BarcodeService $barcodeService
+        protected BarcodeService $barcodeService,
+        protected InventoryMovementService $movementService
     ) {}
 
     /**
@@ -51,6 +54,68 @@ class BarcodeController extends Controller
                     'qty' => $inv->qty,
                 ]),
             ],
+        ]);
+    }
+
+    /**
+     * Quick stock update from barcode scanner (AJAX).
+     */
+    public function updateStock(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'product_id'          => 'required|integer',
+            'inventory_source_id' => 'required|integer',
+            'action'              => 'required|in:set,add,subtract',
+            'qty'                 => 'required|integer|min:0',
+        ]);
+
+        $productId = $request->input('product_id');
+        $sourceId  = $request->input('inventory_source_id');
+        $action    = $request->input('action');
+        $qty       = (int) $request->input('qty');
+
+        // Get current quantity
+        $currentQty = \Webkul\Product\Models\ProductInventory::where('product_id', $productId)
+            ->where('inventory_source_id', $sourceId)
+            ->value('qty') ?? 0;
+
+        // Calculate qty_change based on action
+        $qtyChange = match ($action) {
+            'set'      => $qty - $currentQty,
+            'add'      => $qty,
+            'subtract' => -$qty,
+        };
+
+        if ($qtyChange === 0) {
+            return response()->json([
+                'success' => true,
+                'message' => trans('inventory-plus::app.admin.barcode.no-change'),
+                'new_qty' => $currentQty,
+            ]);
+        }
+
+        $newQty = $currentQty + $qtyChange;
+
+        if ($newQty < 0) {
+            return response()->json([
+                'success' => false,
+                'message' => trans('inventory-plus::app.admin.barcode.negative-stock'),
+            ], 422);
+        }
+
+        $this->movementService->record([
+            'product_id'          => $productId,
+            'inventory_source_id' => $sourceId,
+            'type'                => MovementType::Adjustment,
+            'qty_change'          => $qtyChange,
+            'reason'              => trans('inventory-plus::app.admin.barcode.scanner-adjustment'),
+            'user_id'             => auth()->guard('admin')->id(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => trans('inventory-plus::app.admin.barcode.update-success', ['qty' => $newQty]),
+            'new_qty' => $newQty,
         ]);
     }
 

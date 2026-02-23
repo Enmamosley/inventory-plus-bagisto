@@ -80,3 +80,26 @@ test('import export template can be downloaded', function () {
     $response->assertStatus(200)
         ->assertHeader('Content-Type', 'text/csv; charset=utf-8');
 });
+
+test('barcode update-stock route validates required fields', function () {
+    $this->loginAsAdmin();
+
+    $response = $this->postJson(route('admin.inventory-plus.barcode.update-stock'), []);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['product_id', 'inventory_source_id', 'action', 'qty']);
+});
+
+test('barcode update-stock route rejects invalid action', function () {
+    $this->loginAsAdmin();
+
+    $response = $this->postJson(route('admin.inventory-plus.barcode.update-stock'), [
+        'product_id'          => 1,
+        'inventory_source_id' => 1,
+        'action'              => 'invalid',
+        'qty'                 => 5,
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['action']);
+});
