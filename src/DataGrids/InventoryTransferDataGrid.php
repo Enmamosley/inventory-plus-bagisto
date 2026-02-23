@@ -86,7 +86,7 @@ class InventoryTransferDataGrid extends DataGrid
         $this->addColumn([
             'index' => 'created_at',
             'label' => trans('inventory-plus::app.admin.transfers.date'),
-            'type' => 'date_range',
+            'type' => 'datetime',
             'searchable' => false,
             'sortable' => true,
             'filterable' => true,
