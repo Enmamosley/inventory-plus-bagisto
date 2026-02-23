@@ -99,7 +99,15 @@ return [
             'update-success'     => 'Stock updated to :qty successfully.',
             'no-change'          => 'No changes needed — quantity unchanged.',
             'negative-stock'     => 'Cannot set stock below zero.',
-            'scanner-adjustment' => 'Quick adjustment via barcode scanner',
+            'reason'             => 'Reason',
+            'reason-select'      => 'Select reason',
+            'reason-placeholder' => 'Additional notes (optional)',
+            'reason-count'       => 'Physical count',
+            'reason-damaged'     => 'Damaged product',
+            'reason-return'      => 'Customer return',
+            'reason-receiving'   => 'Goods received',
+            'reason-correction'  => 'Error correction',
+            'reason-custom'      => 'Custom note',
         ],
 
         'stock-alerts' => [

@@ -50,6 +50,27 @@
                     <div id="stock-sources"></div>
 
                     <input type="hidden" id="current-product-id" value="">
+
+                    {{-- Reason / Notes --}}
+                    <div class="mt-3 flex items-center gap-2">
+                        <label class="text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                            📝 @lang('inventory-plus::app.admin.barcode.reason'):
+                        </label>
+                        <select id="reason-preset" class="rounded border px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800" onchange="applyReasonPreset()">
+                            <option value="">@lang('inventory-plus::app.admin.barcode.reason-select')...</option>
+                            <option value="physical_count">@lang('inventory-plus::app.admin.barcode.reason-count')</option>
+                            <option value="damaged">@lang('inventory-plus::app.admin.barcode.reason-damaged')</option>
+                            <option value="return">@lang('inventory-plus::app.admin.barcode.reason-return')</option>
+                            <option value="receiving">@lang('inventory-plus::app.admin.barcode.reason-receiving')</option>
+                            <option value="correction">@lang('inventory-plus::app.admin.barcode.reason-correction')</option>
+                            <option value="custom">@lang('inventory-plus::app.admin.barcode.reason-custom')</option>
+                        </select>
+                        <input type="text"
+                               id="reason-text"
+                               class="flex-1 rounded border px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+                               placeholder="@lang('inventory-plus::app.admin.barcode.reason-placeholder')"
+                               maxlength="500">
+                    </div>
                 </div>
 
                 {{-- Quick Actions --}}
@@ -232,6 +253,7 @@
             const action = document.getElementById('action-' + sourceId).value;
             const qtyInput = document.getElementById('qty-' + sourceId);
             const qty = parseInt(qtyInput.value);
+            const reason = getReasonText();
 
             if (isNaN(qty) || qty < 0) {
                 qtyInput.classList.add('border-red-500');
@@ -255,6 +277,7 @@
                         inventory_source_id: sourceId,
                         action: action,
                         qty: qty,
+                        reason: reason || null,
                     }),
                 });
 
@@ -329,5 +352,40 @@
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('barcode-input').focus();
         });
+
+        const reasonLabels = {
+            physical_count: '@lang('inventory-plus::app.admin.barcode.reason-count')',
+            damaged: '@lang('inventory-plus::app.admin.barcode.reason-damaged')',
+            'return': '@lang('inventory-plus::app.admin.barcode.reason-return')',
+            receiving: '@lang('inventory-plus::app.admin.barcode.reason-receiving')',
+            correction: '@lang('inventory-plus::app.admin.barcode.reason-correction')',
+        };
+
+        function applyReasonPreset() {
+            const preset = document.getElementById('reason-preset').value;
+            const textInput = document.getElementById('reason-text');
+
+            if (preset && preset !== 'custom') {
+                textInput.value = reasonLabels[preset] || '';
+            } else if (preset === 'custom') {
+                textInput.value = '';
+                textInput.focus();
+            }
+        }
+
+        function getReasonText() {
+            const preset = document.getElementById('reason-preset').value;
+            const text = document.getElementById('reason-text').value.trim();
+
+            if (text) {
+                return text;
+            }
+
+            if (preset && preset !== 'custom' && reasonLabels[preset]) {
+                return reasonLabels[preset];
+            }
+
+            return '';
+        }
     </script>
 </x-admin::layouts>

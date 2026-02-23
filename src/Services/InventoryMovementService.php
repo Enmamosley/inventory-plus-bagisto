@@ -80,6 +80,103 @@ class InventoryMovementService
     }
 
     /**
+     * Record a stock adjustment atomically (scan & update workflow).
+     *
+     * All qty reads and writes happen inside a single transaction with
+     * a row-level lock, preventing race conditions.
+     *
+     * @param  array{
+     *     product_id: int,
+     *     inventory_source_id: int,
+     *     action: string,
+     *     qty: int,
+     *     reason?: string,
+     *     user_id?: int,
+     * }  $data
+     * @return array{success: bool, message: string, new_qty?: int, movement?: InventoryMovement}
+     */
+    public function recordAdjustment(array $data): array
+    {
+        $action = $data['action'];   // set | add | subtract
+        $qty    = (int) $data['qty'];
+
+        return DB::transaction(function () use ($data, $action, $qty) {
+            $productId = $data['product_id'];
+            $sourceId  = $data['inventory_source_id'];
+
+            // Lock the row to prevent concurrent modifications
+            $inventory = ProductInventory::query()
+                ->where('product_id', $productId)
+                ->where('inventory_source_id', $sourceId)
+                ->lockForUpdate()
+                ->first();
+
+            $currentQty = $inventory?->qty ?? 0;
+
+            $qtyChange = match ($action) {
+                'set'      => $qty - $currentQty,
+                'add'      => $qty,
+                'subtract' => -$qty,
+                default    => 0,
+            };
+
+            if ($qtyChange === 0) {
+                return [
+                    'success' => true,
+                    'message' => 'no-change',
+                    'new_qty' => $currentQty,
+                ];
+            }
+
+            $newQty = $currentQty + $qtyChange;
+
+            if ($newQty < 0) {
+                return [
+                    'success' => false,
+                    'message' => 'negative-stock',
+                ];
+            }
+
+            $movement = InventoryMovement::create([
+                'product_id'          => $productId,
+                'inventory_source_id' => $sourceId,
+                'user_id'             => $data['user_id'] ?? Auth::id(),
+                'type'                => MovementType::Adjustment,
+                'reference_type'      => null,
+                'reference_id'        => null,
+                'order_id'            => null,
+                'qty_before'          => $currentQty,
+                'qty_change'          => $qtyChange,
+                'qty_after'           => $newQty,
+                'reason'              => $data['reason'] ?? null,
+                'metadata'            => [
+                    'action'   => $action,
+                    'input_qty' => $qty,
+                    'source'   => 'barcode_scanner',
+                ],
+            ]);
+
+            if ($inventory) {
+                $inventory->update(['qty' => $newQty]);
+            } else {
+                ProductInventory::create([
+                    'product_id'          => $productId,
+                    'inventory_source_id' => $sourceId,
+                    'qty'                 => $newQty,
+                    'vendor_id'           => 0,
+                ]);
+            }
+
+            return [
+                'success'  => true,
+                'message'  => 'updated',
+                'new_qty'  => $newQty,
+                'movement' => $movement,
+            ];
+        });
+    }
+
+    /**
      * Record a batch of movements (e.g., from CSV import).
      *
      * @param  array<array>  $items

@@ -99,7 +99,15 @@ return [
             'update-success'     => 'Stock actualizado a :qty exitosamente.',
             'no-change'          => 'Sin cambios — la cantidad es la misma.',
             'negative-stock'     => 'No se puede establecer stock por debajo de cero.',
-            'scanner-adjustment' => 'Ajuste rápido vía escáner de código de barras',
+            'reason'             => 'Razón',
+            'reason-select'      => 'Seleccionar razón',
+            'reason-placeholder' => 'Notas adicionales (opcional)',
+            'reason-count'       => 'Conteo físico',
+            'reason-damaged'     => 'Producto dañado',
+            'reason-return'      => 'Devolución de cliente',
+            'reason-receiving'   => 'Recepción de mercancía',
+            'reason-correction'  => 'Corrección de error',
+            'reason-custom'      => 'Nota personalizada',
         ],
 
         'stock-alerts' => [
