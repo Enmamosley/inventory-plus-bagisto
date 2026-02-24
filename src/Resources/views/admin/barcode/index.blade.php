@@ -91,78 +91,38 @@
         </div>
     </div>
 
-    <div class="mt-4 grid grid-cols-2 gap-4">
-        {{-- Barcode Generator --}}
-        <div class="box-shadow rounded bg-white p-4 dark:bg-gray-900">
-            <h3 class="mb-3 text-lg font-semibold">🏷️ @lang('inventory-plus::app.admin.barcode.generate')</h3>
+    {{-- Print Labels Section --}}
+    <div class="mt-4 box-shadow rounded bg-white p-4 dark:bg-gray-900">
+        <h3 class="mb-3 text-lg font-semibold">🖨️ @lang('inventory-plus::app.admin.barcode.print-labels')</h3>
 
-            <div class="space-y-3">
-                <x-admin::form.control-group>
-                    <x-admin::form.control-group.label>
-                        @lang('inventory-plus::app.admin.barcode.barcode-value')
-                    </x-admin::form.control-group.label>
-                    <input type="text"
-                           id="gen-value"
-                           class="w-full rounded border px-3 py-2 dark:border-gray-700 dark:bg-gray-800"
-                           placeholder="Enter barcode value">
-                </x-admin::form.control-group>
+        <form method="POST" action="{{ route('admin.inventory-plus.barcode.print-labels') }}" target="_blank">
+            @csrf
 
-                <x-admin::form.control-group>
-                    <x-admin::form.control-group.label>
-                        @lang('inventory-plus::app.admin.barcode.barcode-type')
-                    </x-admin::form.control-group.label>
-                    <select id="gen-type" class="w-full rounded border px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
-                        <option value="EAN-13">EAN-13</option>
-                        <option value="EAN-8">EAN-8</option>
-                        <option value="UPC-A">UPC-A</option>
-                        <option value="CODE-128" selected>Code 128</option>
-                        <option value="CODE-39">Code 39</option>
-                    </select>
-                </x-admin::form.control-group>
+            <x-admin::form.control-group>
+                <x-admin::form.control-group.label>
+                    @lang('inventory-plus::app.admin.barcode.select-products')
+                </x-admin::form.control-group.label>
+                <input type="text"
+                       name="product_ids_text"
+                       class="w-full rounded border px-3 py-2 dark:border-gray-700 dark:bg-gray-800"
+                       placeholder="Enter product IDs (comma-separated): 1, 2, 3"
+                       id="label-product-ids">
+            </x-admin::form.control-group>
 
-                <button onclick="generateBarcode()" class="primary-button">
-                    @lang('inventory-plus::app.admin.barcode.preview')
-                </button>
+            <x-admin::form.control-group>
+                <x-admin::form.control-group.label>
+                    @lang('inventory-plus::app.admin.barcode.copies')
+                </x-admin::form.control-group.label>
+                <input type="number" name="copies" value="1" min="1" max="100"
+                       class="w-full rounded border px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
+            </x-admin::form.control-group>
 
-                <div id="gen-preview" class="mt-3 hidden text-center">
-                    <div id="gen-barcode-img"></div>
-                </div>
-            </div>
-        </div>
+            <div id="hidden-product-ids"></div>
 
-        {{-- Print Labels Section --}}
-        <div class="box-shadow rounded bg-white p-4 dark:bg-gray-900">
-            <h3 class="mb-3 text-lg font-semibold">🖨️ @lang('inventory-plus::app.admin.barcode.print-labels')</h3>
-
-            <form method="POST" action="{{ route('admin.inventory-plus.barcode.print-labels') }}" target="_blank">
-                @csrf
-
-                <x-admin::form.control-group>
-                    <x-admin::form.control-group.label>
-                        @lang('inventory-plus::app.admin.barcode.select-products')
-                    </x-admin::form.control-group.label>
-                    <input type="text"
-                           name="product_ids_text"
-                           class="w-full rounded border px-3 py-2 dark:border-gray-700 dark:bg-gray-800"
-                           placeholder="Enter product IDs (comma-separated): 1, 2, 3"
-                           id="label-product-ids">
-                </x-admin::form.control-group>
-
-                <x-admin::form.control-group>
-                    <x-admin::form.control-group.label>
-                        @lang('inventory-plus::app.admin.barcode.copies')
-                    </x-admin::form.control-group.label>
-                    <input type="number" name="copies" value="1" min="1" max="100"
-                           class="w-full rounded border px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
-                </x-admin::form.control-group>
-
-                <div id="hidden-product-ids"></div>
-
-                <button type="submit" class="primary-button mt-3" onclick="prepareProductIds()">
-                    @lang('inventory-plus::app.admin.barcode.print-labels')
-                </button>
-            </form>
-        </div>
+            <button type="submit" class="primary-button mt-3" onclick="prepareProductIds()">
+                @lang('inventory-plus::app.admin.barcode.print-labels')
+            </button>
+        </form>
     </div>
 
     <script>
@@ -306,31 +266,6 @@
             } catch (e) {
                 row.style.opacity = '1';
                 alert('Error: ' + e.message);
-            }
-        }
-
-        async function generateBarcode() {
-            const value = document.getElementById('gen-value').value.trim();
-            const type = document.getElementById('gen-type').value;
-            if (!value) return;
-
-            try {
-                const response = await fetch('{{ route("admin.inventory-plus.barcode.generate") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({ value, type, format: 'png' }),
-                });
-
-                const data = await response.json();
-                document.getElementById('gen-barcode-img').innerHTML =
-                    `<img src="${data.barcode}" alt="barcode" style="max-width:100%;"><p class="mt-1 font-mono text-sm">${value}</p>`;
-                document.getElementById('gen-preview').classList.remove('hidden');
-            } catch (e) {
-                alert('Error generating barcode');
             }
         }
 
