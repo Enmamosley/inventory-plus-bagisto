@@ -98,11 +98,11 @@ class InventoryMovementService
     public function recordAdjustment(array $data): array
     {
         $action = $data['action'];   // set | add | subtract
-        $qty    = (int) $data['qty'];
+        $qty = (int) $data['qty'];
 
         return DB::transaction(function () use ($data, $action, $qty) {
             $productId = $data['product_id'];
-            $sourceId  = $data['inventory_source_id'];
+            $sourceId = $data['inventory_source_id'];
 
             // Lock the row to prevent concurrent modifications
             $inventory = ProductInventory::query()
@@ -114,10 +114,10 @@ class InventoryMovementService
             $currentQty = $inventory?->qty ?? 0;
 
             $qtyChange = match ($action) {
-                'set'      => $qty - $currentQty,
-                'add'      => $qty,
+                'set' => $qty - $currentQty,
+                'add' => $qty,
                 'subtract' => -$qty,
-                default    => 0,
+                default => 0,
             };
 
             if ($qtyChange === 0) {
@@ -138,21 +138,21 @@ class InventoryMovementService
             }
 
             $movement = InventoryMovement::create([
-                'product_id'          => $productId,
+                'product_id' => $productId,
                 'inventory_source_id' => $sourceId,
-                'user_id'             => $data['user_id'] ?? Auth::id(),
-                'type'                => MovementType::Adjustment,
-                'reference_type'      => null,
-                'reference_id'        => null,
-                'order_id'            => null,
-                'qty_before'          => $currentQty,
-                'qty_change'          => $qtyChange,
-                'qty_after'           => $newQty,
-                'reason'              => $data['reason'] ?? null,
-                'metadata'            => [
-                    'action'   => $action,
+                'user_id' => $data['user_id'] ?? Auth::id(),
+                'type' => MovementType::Adjustment,
+                'reference_type' => null,
+                'reference_id' => null,
+                'order_id' => null,
+                'qty_before' => $currentQty,
+                'qty_change' => $qtyChange,
+                'qty_after' => $newQty,
+                'reason' => $data['reason'] ?? null,
+                'metadata' => [
+                    'action' => $action,
                     'input_qty' => $qty,
-                    'source'   => 'barcode_scanner',
+                    'source' => 'barcode_scanner',
                 ],
             ]);
 
@@ -160,17 +160,17 @@ class InventoryMovementService
                 $inventory->update(['qty' => $newQty]);
             } else {
                 ProductInventory::create([
-                    'product_id'          => $productId,
+                    'product_id' => $productId,
                     'inventory_source_id' => $sourceId,
-                    'qty'                 => $newQty,
-                    'vendor_id'           => 0,
+                    'qty' => $newQty,
+                    'vendor_id' => 0,
                 ]);
             }
 
             return [
-                'success'  => true,
-                'message'  => 'updated',
-                'new_qty'  => $newQty,
+                'success' => true,
+                'message' => 'updated',
+                'new_qty' => $newQty,
                 'movement' => $movement,
             ];
         });

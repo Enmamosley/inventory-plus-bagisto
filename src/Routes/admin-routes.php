@@ -8,7 +8,7 @@ use Webkul\InventoryPlus\Http\Controllers\Admin\StockAlertController;
 use Webkul\InventoryPlus\Http\Controllers\Admin\TransferController;
 
 Route::group([
-    'prefix' => config('app.admin_url', 'admin') . '/inventory-plus',
+    'prefix' => config('app.admin_url', 'admin').'/inventory-plus',
     'middleware' => ['web', 'admin'],
     'as' => 'admin.inventory-plus.',
 ], function () {
@@ -38,6 +38,7 @@ Route::group([
         Route::post('/lookup', 'lookup')->name('lookup');
         Route::post('/update-stock', 'updateStock')->name('update-stock');
         Route::post('/generate', 'generate')->name('generate');
+        Route::post('/search-products', 'searchProducts')->name('search-products');
         Route::post('/print-labels', 'printLabels')->name('print-labels');
         Route::post('/auto-generate', 'autoGenerate')->name('auto-generate');
     });

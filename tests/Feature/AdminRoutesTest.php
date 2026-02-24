@@ -1,7 +1,5 @@
 <?php
 
-use Webkul\User\Models\Admin;
-
 test('movements index page loads for admin', function () {
     $this->loginAsAdmin();
 
@@ -94,12 +92,52 @@ test('barcode update-stock route rejects invalid action', function () {
     $this->loginAsAdmin();
 
     $response = $this->postJson(route('admin.inventory-plus.barcode.update-stock'), [
-        'product_id'          => 1,
+        'product_id' => 1,
         'inventory_source_id' => 1,
-        'action'              => 'invalid',
-        'qty'                 => 5,
+        'action' => 'invalid',
+        'qty' => 5,
     ]);
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['action']);
+});
+
+test('barcode search-products returns json', function () {
+    $this->loginAsAdmin();
+
+    $response = $this->postJson(route('admin.inventory-plus.barcode.search-products'), [
+        'query' => 'test',
+    ]);
+
+    $response->assertStatus(200)
+        ->assertJsonStructure(['products']);
+});
+
+test('barcode search-products validates category_id', function () {
+    $this->loginAsAdmin();
+
+    $response = $this->postJson(route('admin.inventory-plus.barcode.search-products'), [
+        'category_id' => 99999,
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['category_id']);
+});
+
+test('barcode search-products accepts valid category', function () {
+    $this->loginAsAdmin();
+
+    // Use first non-root category
+    $category = \Webkul\Category\Models\Category::whereNotNull('parent_id')->first();
+
+    if (! $category) {
+        $this->markTestSkipped('No non-root category available.');
+    }
+
+    $response = $this->postJson(route('admin.inventory-plus.barcode.search-products'), [
+        'category_id' => $category->id,
+    ]);
+
+    $response->assertStatus(200)
+        ->assertJsonStructure(['products']);
 });

@@ -4,6 +4,7 @@ namespace Webkul\InventoryPlus\Http\Controllers\Admin;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Webkul\Category\Models\Category;
 use Webkul\InventoryPlus\Enums\BarcodeType;
 use Webkul\InventoryPlus\Services\BarcodeService;
 use Webkul\InventoryPlus\Services\InventoryMovementService;
@@ -20,7 +21,74 @@ class BarcodeController extends Controller
      */
     public function index(): \Illuminate\View\View
     {
-        return view('inventory-plus::admin.barcode.index');
+        $locale = app()->getLocale();
+
+        $categories = Category::with(['translations'])
+            ->whereNotNull('parent_id')
+            ->get()
+            ->map(fn ($cat) => [
+                'id' => $cat->id,
+                'name' => $cat->translate($locale)?->name ?? $cat->translate('en')?->name ?? "Category #{$cat->id}",
+            ]);
+
+        return view('inventory-plus::admin.barcode.index', compact('categories'));
+    }
+
+    /**
+     * Search products by name, SKU, or barcode (AJAX).
+     */
+    public function searchProducts(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'query' => 'nullable|string|max:200',
+            'category_id' => 'nullable|integer|exists:categories,id',
+        ]);
+
+        $search = $request->input('query', '');
+        $categoryId = $request->input('category_id');
+        $locale = app()->getLocale();
+        $channel = core()->getCurrentChannelCode();
+
+        $query = \Webkul\Product\Models\ProductFlat::query()
+            ->select('product_flat.product_id', 'product_flat.sku', 'product_flat.name', 'product_flat.price')
+            ->where('product_flat.locale', $locale)
+            ->where('product_flat.channel', $channel)
+            ->whereNotNull('product_flat.name');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('product_flat.name', 'LIKE', "%{$search}%")
+                    ->orWhere('product_flat.sku', 'LIKE', "%{$search}%");
+            });
+        }
+
+        if ($categoryId) {
+            $query->join('product_categories', 'product_categories.product_id', '=', 'product_flat.product_id')
+                ->where('product_categories.category_id', $categoryId);
+        }
+
+        $products = $query->distinct()
+            ->limit(30)
+            ->get();
+
+        // Eager load barcode from EAV on parent products
+        $productIds = $products->pluck('product_id')->toArray();
+        $parentProducts = \Webkul\Product\Models\Product::whereIn('id', $productIds)->get()->keyBy('id');
+
+        $results = $products->map(function ($flat) use ($parentProducts) {
+            $parent = $parentProducts->get($flat->product_id);
+
+            return [
+                'id' => $flat->product_id,
+                'sku' => $flat->sku,
+                'name' => $flat->name,
+                'price' => $flat->price ? core()->currency($flat->price) : null,
+                'barcode' => $parent?->barcode,
+                'barcode_type' => $parent?->barcode_type,
+            ];
+        });
+
+        return response()->json(['products' => $results->values()]);
     }
 
     /**
@@ -62,26 +130,26 @@ class BarcodeController extends Controller
     public function updateStock(Request $request): \Illuminate\Http\JsonResponse
     {
         $request->validate([
-            'product_id'          => 'required|integer|exists:products,id',
+            'product_id' => 'required|integer|exists:products,id',
             'inventory_source_id' => 'required|integer|exists:inventory_sources,id',
-            'action'              => 'required|in:set,add,subtract',
-            'qty'                 => 'required|integer|min:0',
-            'reason'              => 'nullable|string|max:500',
+            'action' => 'required|in:set,add,subtract',
+            'qty' => 'required|integer|min:0',
+            'reason' => 'nullable|string|max:500',
         ]);
 
         $result = $this->movementService->recordAdjustment([
-            'product_id'          => $request->input('product_id'),
+            'product_id' => $request->input('product_id'),
             'inventory_source_id' => $request->input('inventory_source_id'),
-            'action'              => $request->input('action'),
-            'qty'                 => (int) $request->input('qty'),
-            'reason'              => $request->input('reason'),
-            'user_id'             => auth()->guard('admin')->id(),
+            'action' => $request->input('action'),
+            'qty' => (int) $request->input('qty'),
+            'reason' => $request->input('reason'),
+            'user_id' => auth()->guard('admin')->id(),
         ]);
 
         if (! $result['success']) {
             return response()->json([
                 'success' => false,
-                'message' => trans('inventory-plus::app.admin.barcode.' . $result['message']),
+                'message' => trans('inventory-plus::app.admin.barcode.'.$result['message']),
             ], 422);
         }
 
@@ -119,7 +187,7 @@ class BarcodeController extends Controller
         return response()->json([
             'success' => true,
             'format' => $format,
-            'barcode' => $format === 'png' ? 'data:image/png;base64,' . $barcode : $barcode,
+            'barcode' => $format === 'png' ? 'data:image/png;base64,'.$barcode : $barcode,
         ]);
     }
 
@@ -183,7 +251,7 @@ class BarcodeController extends Controller
 
         // Pad product ID to fill 12 digits
         $paddedId = str_pad((string) $product->id, 12 - strlen($prefix), '0', STR_PAD_LEFT);
-        $prefix12 = $prefix . $paddedId;
+        $prefix12 = $prefix.$paddedId;
 
         // Truncate to 12 exactly
         $prefix12 = substr($prefix12, 0, 12);

@@ -95,33 +95,96 @@
     <div class="mt-4 box-shadow rounded bg-white p-4 dark:bg-gray-900">
         <h3 class="mb-3 text-lg font-semibold">🖨️ @lang('inventory-plus::app.admin.barcode.print-labels')</h3>
 
-        <form method="POST" action="{{ route('admin.inventory-plus.barcode.print-labels') }}" target="_blank">
-            @csrf
+        {{-- Search & Filter Row --}}
+        <div class="flex flex-wrap gap-3 mb-4">
+            {{-- Category Filter --}}
+            <div class="w-64">
+                <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">
+                    @lang('inventory-plus::app.admin.barcode.filter-category')
+                </label>
+                <select id="label-category-filter" class="w-full rounded border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800" onchange="filterByCategory()">
+                    <option value="">@lang('inventory-plus::app.admin.barcode.all-categories')</option>
+                    @foreach ($categories as $cat)
+                        <option value="{{ $cat['id'] }}">{{ $cat['name'] }}</option>
+                    @endforeach
+                </select>
+            </div>
 
-            <x-admin::form.control-group>
-                <x-admin::form.control-group.label>
-                    @lang('inventory-plus::app.admin.barcode.select-products')
-                </x-admin::form.control-group.label>
+            {{-- Product Search --}}
+            <div class="flex-1 min-w-[250px] relative">
+                <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">
+                    @lang('inventory-plus::app.admin.barcode.search-product')
+                </label>
                 <input type="text"
-                       name="product_ids_text"
-                       class="w-full rounded border px-3 py-2 dark:border-gray-700 dark:bg-gray-800"
-                       placeholder="Enter product IDs (comma-separated): 1, 2, 3"
-                       id="label-product-ids">
-            </x-admin::form.control-group>
+                       id="label-search-input"
+                       class="w-full rounded border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"
+                       placeholder="@lang('inventory-plus::app.admin.barcode.search-product-placeholder')"
+                       oninput="debounceSearch()"
+                       onkeydown="if(event.key==='Escape'){closeSearchResults();}">
+                {{-- Search Results Dropdown --}}
+                <div id="search-results-dropdown" class="absolute z-50 mt-1 hidden w-full max-h-64 overflow-y-auto rounded border bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                </div>
+            </div>
 
-            <x-admin::form.control-group>
-                <x-admin::form.control-group.label>
-                    @lang('inventory-plus::app.admin.barcode.copies')
-                </x-admin::form.control-group.label>
-                <input type="number" name="copies" value="1" min="1" max="100"
-                       class="w-full rounded border px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
-            </x-admin::form.control-group>
+            {{-- Load by Category Button --}}
+            <div class="flex items-end">
+                <button type="button" onclick="loadCategoryProducts()" class="rounded border border-blue-600 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 dark:border-blue-500 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50">
+                    📂 @lang('inventory-plus::app.admin.barcode.load-category')
+                </button>
+            </div>
+        </div>
 
+        {{-- Selected Products Table --}}
+        <div id="selected-products-container" class="mb-4 hidden">
+            <div class="flex items-center justify-between mb-2">
+                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    @lang('inventory-plus::app.admin.barcode.selected-products') (<span id="selected-count">0</span>)
+                </h4>
+                <button type="button" onclick="clearAllSelected()" class="text-xs text-red-600 hover:text-red-800 dark:text-red-400">
+                    ✕ @lang('inventory-plus::app.admin.barcode.clear-all')
+                </button>
+            </div>
+            <div class="rounded border dark:border-gray-700 overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                            <th class="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">@lang('inventory-plus::app.admin.barcode.product-name')</th>
+                            <th class="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">SKU</th>
+                            <th class="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">@lang('inventory-plus::app.admin.barcode.barcode-status')</th>
+                            <th class="px-3 py-2 text-center font-medium text-gray-500 dark:text-gray-400">@lang('inventory-plus::app.admin.barcode.copies')</th>
+                            <th class="px-3 py-2 w-10"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="selected-products-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {{-- Print Form --}}
+        <form method="POST" action="{{ route('admin.inventory-plus.barcode.print-labels') }}" target="_blank" id="print-labels-form">
+            @csrf
             <div id="hidden-product-ids"></div>
 
-            <button type="submit" class="primary-button mt-3" onclick="prepareProductIds()">
-                @lang('inventory-plus::app.admin.barcode.print-labels')
+            {{-- Global Copies --}}
+            <div class="flex items-center gap-3 mb-3">
+                <label class="text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    @lang('inventory-plus::app.admin.barcode.global-copies'):
+                </label>
+                <input type="number" id="global-copies" value="1" min="1" max="100"
+                       class="w-20 rounded border px-2 py-1.5 text-center text-sm dark:border-gray-700 dark:bg-gray-800"
+                       onchange="applyGlobalCopies()">
+                <button type="button" onclick="applyGlobalCopies()" class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                    @lang('inventory-plus::app.admin.barcode.apply-all')
+                </button>
+            </div>
+
+            <button type="submit" class="primary-button" id="print-btn" disabled onclick="preparePrintForm()">
+                🖨️ @lang('inventory-plus::app.admin.barcode.print-labels')
             </button>
+            <span id="no-barcode-warning" class="ml-3 hidden text-xs text-amber-600 dark:text-amber-400">
+                ⚠️ @lang('inventory-plus::app.admin.barcode.no-barcode-warning')
+            </span>
         </form>
     </div>
 
@@ -270,17 +333,243 @@
         }
 
         function prepareProductIds() {
-            const text = document.getElementById('label-product-ids').value;
-            const ids = text.split(',').map(s => s.trim()).filter(s => s && !isNaN(s));
+            // Legacy removed — now handled by preparePrintForm
+        }
+
+        // ========== PRINT LABELS: Search, Select & Print ==========
+        let selectedProducts = {};  // { productId: { id, sku, name, barcode, barcode_type, price, copies } }
+        let searchTimer = null;
+
+        function debounceSearch() {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => searchProducts(), 300);
+        }
+
+        async function searchProducts() {
+            const query = document.getElementById('label-search-input').value.trim();
+            const categoryId = document.getElementById('label-category-filter').value;
+            const dropdown = document.getElementById('search-results-dropdown');
+
+            if (!query && !categoryId) {
+                dropdown.classList.add('hidden');
+                return;
+            }
+
+            if (query.length > 0 && query.length < 2) return;
+
+            try {
+                const response = await fetch('{{ route("admin.inventory-plus.barcode.search-products") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ query, category_id: categoryId || null }),
+                });
+
+                const data = await response.json();
+                renderSearchResults(data.products || []);
+            } catch (e) {
+                console.error('Search error:', e);
+            }
+        }
+
+        function renderSearchResults(products) {
+            const dropdown = document.getElementById('search-results-dropdown');
+
+            if (!products.length) {
+                dropdown.innerHTML = '<div class="px-3 py-2 text-sm text-gray-400">@lang('inventory-plus::app.admin.barcode.no-results')</div>';
+                dropdown.classList.remove('hidden');
+                return;
+            }
+
+            let html = '';
+            products.forEach(p => {
+                const isSelected = selectedProducts[p.id];
+                const barcodeIcon = p.barcode ? '✅' : '⚠️';
+                const selectedClass = isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700';
+
+                html += `
+                <div class="flex items-center justify-between px-3 py-2 cursor-pointer border-b dark:border-gray-700 last:border-0 ${selectedClass}"
+                     onclick="toggleProduct(${JSON.stringify(p).replace(/"/g, '&quot;')})">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium truncate">${p.name}</div>
+                        <div class="text-xs text-gray-400">SKU: ${p.sku} ${p.price ? '· ' + p.price : ''}</div>
+                    </div>
+                    <div class="flex items-center gap-2 ml-2 flex-shrink-0">
+                        <span class="text-xs">${barcodeIcon} ${p.barcode || '@lang('inventory-plus::app.admin.barcode.no-barcode')'}</span>
+                        ${isSelected ? '<span class="text-blue-600 text-xs font-bold">✓</span>' : '<span class="text-gray-300 text-xs">+</span>'}
+                    </div>
+                </div>`;
+            });
+
+            dropdown.innerHTML = html;
+            dropdown.classList.remove('hidden');
+        }
+
+        function closeSearchResults() {
+            document.getElementById('search-results-dropdown').classList.add('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const container = document.querySelector('.relative');
+            if (container && !container.contains(e.target)) {
+                closeSearchResults();
+            }
+        });
+
+        function toggleProduct(product) {
+            if (selectedProducts[product.id]) {
+                removeProduct(product.id);
+            } else {
+                addProduct(product);
+            }
+            searchProducts(); // Re-render dropdown to update checkmarks
+        }
+
+        function addProduct(product) {
+            if (selectedProducts[product.id]) return;
+            const globalCopies = parseInt(document.getElementById('global-copies').value) || 1;
+            selectedProducts[product.id] = { ...product, copies: globalCopies };
+            renderSelectedProducts();
+        }
+
+        function removeProduct(productId) {
+            delete selectedProducts[productId];
+            renderSelectedProducts();
+        }
+
+        function clearAllSelected() {
+            selectedProducts = {};
+            renderSelectedProducts();
+        }
+
+        function renderSelectedProducts() {
+            const tbody = document.getElementById('selected-products-tbody');
+            const container = document.getElementById('selected-products-container');
+            const count = Object.keys(selectedProducts).length;
+
+            document.getElementById('selected-count').textContent = count;
+            document.getElementById('print-btn').disabled = count === 0;
+
+            if (count === 0) {
+                container.classList.add('hidden');
+                document.getElementById('no-barcode-warning').classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+
+            let html = '';
+            let hasNoBarcodes = false;
+
+            Object.values(selectedProducts).forEach(p => {
+                const barcodeHtml = p.barcode
+                    ? `<span class="rounded bg-green-100 px-2 py-0.5 text-xs font-mono text-green-700 dark:bg-green-900/30 dark:text-green-400">${p.barcode}</span>`
+                    : `<span class="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">@lang('inventory-plus::app.admin.barcode.no-barcode')</span>`;
+
+                if (!p.barcode) hasNoBarcodes = true;
+
+                html += `
+                <tr class="border-b dark:border-gray-700 last:border-0">
+                    <td class="px-3 py-2 text-sm">${p.name}</td>
+                    <td class="px-3 py-2 text-sm font-mono text-gray-500">${p.sku}</td>
+                    <td class="px-3 py-2">${barcodeHtml}</td>
+                    <td class="px-3 py-2 text-center">
+                        <input type="number" value="${p.copies}" min="1" max="100"
+                               class="w-16 rounded border px-1 py-1 text-center text-xs dark:border-gray-700 dark:bg-gray-800"
+                               onchange="updateCopies(${p.id}, this.value)">
+                    </td>
+                    <td class="px-3 py-2 text-center">
+                        <button type="button" onclick="removeProduct(${p.id})" class="text-red-500 hover:text-red-700 text-sm" title="Remove">✕</button>
+                    </td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = html;
+
+            document.getElementById('no-barcode-warning').classList.toggle('hidden', !hasNoBarcodes);
+        }
+
+        function updateCopies(productId, copies) {
+            if (selectedProducts[productId]) {
+                selectedProducts[productId].copies = Math.max(1, Math.min(100, parseInt(copies) || 1));
+            }
+        }
+
+        function applyGlobalCopies() {
+            const copies = parseInt(document.getElementById('global-copies').value) || 1;
+            Object.values(selectedProducts).forEach(p => p.copies = copies);
+            renderSelectedProducts();
+        }
+
+        async function loadCategoryProducts() {
+            const categoryId = document.getElementById('label-category-filter').value;
+            if (!categoryId) {
+                alert('@lang('inventory-plus::app.admin.barcode.select-category-first')');
+                return;
+            }
+
+            try {
+                const response = await fetch('{{ route("admin.inventory-plus.barcode.search-products") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ query: '', category_id: categoryId }),
+                });
+
+                const data = await response.json();
+                (data.products || []).forEach(p => addProduct(p));
+            } catch (e) {
+                console.error('Load category error:', e);
+            }
+        }
+
+        function filterByCategory() {
+            const query = document.getElementById('label-search-input').value.trim();
+            if (query) {
+                searchProducts();
+            }
+        }
+
+        function preparePrintForm() {
             const container = document.getElementById('hidden-product-ids');
             container.innerHTML = '';
-            ids.forEach(id => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'product_ids[]';
-                input.value = id;
-                container.appendChild(input);
+
+            let hasAny = false;
+            Object.values(selectedProducts).forEach(p => {
+                if (!p.barcode) return; // Skip products without barcodes
+
+                for (let i = 0; i < p.copies; i++) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'product_ids[]';
+                    input.value = p.id;
+                    container.appendChild(input);
+                }
+
+                hasAny = true;
             });
+
+            // Set copies to 1 since we're already duplicating by copies count
+            let copiesInput = container.querySelector('input[name="copies"]');
+            if (!copiesInput) {
+                copiesInput = document.createElement('input');
+                copiesInput.type = 'hidden';
+                copiesInput.name = 'copies';
+                container.appendChild(copiesInput);
+            }
+            copiesInput.value = '1';
+
+            if (!hasAny) {
+                event.preventDefault();
+                alert('@lang('inventory-plus::app.admin.barcode.no-products-barcode')');
+            }
         }
 
         // Auto-focus input on page load

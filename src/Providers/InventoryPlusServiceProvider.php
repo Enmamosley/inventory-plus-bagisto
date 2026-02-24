@@ -14,10 +14,10 @@ class InventoryPlusServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
-        $this->loadRoutesFrom(__DIR__ . '/../Routes/admin-routes.php');
-        $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'inventory-plus');
-        $this->loadViewsFrom(__DIR__ . '/../Resources/views', 'inventory-plus');
+        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
+        $this->loadRoutesFrom(__DIR__.'/../Routes/admin-routes.php');
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'inventory-plus');
+        $this->loadViewsFrom(__DIR__.'/../Resources/views', 'inventory-plus');
 
         $this->app->register(EventServiceProvider::class);
 
@@ -30,11 +30,11 @@ class InventoryPlusServiceProvider extends ServiceProvider
 
         // Publish views and lang
         $this->publishes([
-            __DIR__ . '/../Resources/views' => resource_path('views/vendor/inventory-plus'),
+            __DIR__.'/../Resources/views' => resource_path('views/vendor/inventory-plus'),
         ], 'inventory-plus-views');
 
         $this->publishes([
-            __DIR__ . '/../Resources/lang' => lang_path('vendor/inventory-plus'),
+            __DIR__.'/../Resources/lang' => lang_path('vendor/inventory-plus'),
         ], 'inventory-plus-lang');
 
         // Schedule stock alert checks
@@ -58,7 +58,7 @@ class InventoryPlusServiceProvider extends ServiceProvider
             $app->make(InventoryMovementService::class)
         ));
 
-        $this->mergeConfigFrom(__DIR__ . '/../Config/menu.php', 'menu.admin');
-        $this->mergeConfigFrom(__DIR__ . '/../Config/acl.php', 'acl');
+        $this->mergeConfigFrom(__DIR__.'/../Config/menu.php', 'menu.admin');
+        $this->mergeConfigFrom(__DIR__.'/../Config/acl.php', 'acl');
     }
 }

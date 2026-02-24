@@ -82,7 +82,7 @@ class InventoryMovementDataGrid extends DataGrid
             'searchable' => false,
             'sortable' => true,
             'filterable' => false,
-            'closure' => fn ($row) => ($row->qty_change > 0 ? '+' : '') . $row->qty_change,
+            'closure' => fn ($row) => ($row->qty_change > 0 ? '+' : '').$row->qty_change,
         ]);
 
         $this->addColumn([

@@ -172,7 +172,7 @@ class CsvImportExportService
 
                 $imported++;
             } catch (\Throwable $e) {
-                $errors[] = "Line {$line}: " . $e->getMessage();
+                $errors[] = "Line {$line}: ".$e->getMessage();
             }
         }
 
@@ -192,7 +192,7 @@ class CsvImportExportService
     private function escapeCsv(string $value): string
     {
         if (str_contains($value, ',') || str_contains($value, '"') || str_contains($value, "\n")) {
-            return '"' . str_replace('"', '""', $value) . '"';
+            return '"'.str_replace('"', '""', $value).'"';
         }
 
         return $value;

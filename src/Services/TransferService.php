@@ -156,7 +156,7 @@ class TransferService
 
     private function generateReferenceNumber(): string
     {
-        return 'TRF-' . strtoupper(date('Ymd')) . '-' . str_pad(
+        return 'TRF-'.strtoupper(date('Ymd')).'-'.str_pad(
             (string) (InventoryTransfer::whereDate('created_at', today())->count() + 1),
             4,
             '0',

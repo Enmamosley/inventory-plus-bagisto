@@ -4,6 +4,4 @@ namespace Webkul\InventoryPlus\Models;
 
 use Konekt\Concord\Proxies\ModelProxy;
 
-class StockAlertRuleProxy extends ModelProxy
-{
-}
+class StockAlertRuleProxy extends ModelProxy {}

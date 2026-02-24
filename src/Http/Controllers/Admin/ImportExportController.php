@@ -29,7 +29,7 @@ class ImportExportController extends Controller
     {
         $sourceId = $request->input('inventory_source_id');
         $csv = $this->csvService->exportInventory($sourceId ? (int) $sourceId : null);
-        $filename = 'inventory-export-' . date('Y-m-d-His') . '.csv';
+        $filename = 'inventory-export-'.date('Y-m-d-His').'.csv';
 
         return response($csv)
             ->header('Content-Type', 'text/csv')

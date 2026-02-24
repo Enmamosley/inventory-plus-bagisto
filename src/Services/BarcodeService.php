@@ -50,7 +50,7 @@ class BarcodeService
             : BarcodeType::from($productData['barcode_type']);
 
         $barcodePng = $this->generatePng($productData['barcode'], $type, 2, 50);
-        $barcodeImg = 'data:image/png;base64,' . $barcodePng;
+        $barcodeImg = 'data:image/png;base64,'.$barcodePng;
 
         $name = e($productData['product_name']);
         $sku = e($productData['sku']);
@@ -129,7 +129,7 @@ class BarcodeService
 
         $checkDigit = (10 - ($sum % 10)) % 10;
 
-        return $prefix12 . $checkDigit;
+        return $prefix12.$checkDigit;
     }
 
     /**
@@ -175,6 +175,6 @@ class BarcodeService
 
     private function getGeneratorType(string $constant): string
     {
-        return constant(BarcodeGeneratorPNG::class . '::' . $constant);
+        return constant(BarcodeGeneratorPNG::class.'::'.$constant);
     }
 }
